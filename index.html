@@ -3,253 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Text Replacer</title>
+    <title>Discord Screenshot Live Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --panel-bg: #111214;
-            --accent: #00f0ff;
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-midnight: #000000;
+            --text-color: #f2f3f5;
         }
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1e1f22;
-            color: #fff;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- CONTROLS SIDEBAR --- */
-        .sidebar {
-            width: 340px;
-            background: var(--panel-bg);
-            border-right: 1px solid var(--border);
-            padding: 20px;
-            box-sizing: border-box;
+            background: #111214;
+            color: white;
+            font-family: -apple-system, system-ui, sans-serif;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            align-items: center;
+            height: 100vh;
         }
 
-        .sidebar h2 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* --- TOP TOOLBAR --- */
+        .toolbar {
+            width: 100%;
+            background: #1e1f22;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            border-bottom: 1px solid #000;
+            z-index: 100;
         }
 
         .btn {
-            background: #313338;
-            color: #fff;
-            border: 1px solid var(--border);
-            padding: 10px;
+            background: #5865f2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.2s;
-            text-align: center;
         }
 
-        .btn:hover {
-            border-color: var(--accent);
-            background: rgba(0, 240, 255, 0.1);
-        }
-
-        .btn-main {
-            background: var(--accent);
-            color: #000;
-        }
-
-        .btn-main:hover {
-            background: #00c8d6;
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-        }
-
-        .instructions {
-            font-size: 0.85rem;
-            color: #949ba4;
-            line-height: 1.4;
-            background: rgba(255,255,255,0.02);
-            padding: 10px;
-            border-radius: 4px;
-            border-left: 3px solid var(--accent);
-        }
-
-        /* --- WORKSPACE --- */
-        .workspace {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            overflow: auto;
+        /* --- THE EDITOR AREA --- */
+        .canvas-container {
             position: relative;
+            margin-top: 20px;
+            background: var(--bg-midnight);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            display: none; /* Shown after upload */
         }
 
-        /* Container that holds the uploaded image and the editable text boxes */
-        #editor-container {
-            position: relative;
-            display: inline-block;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        #base-image {
+        #bg-image {
             display: block;
-            max-height: 85vh;
-            width: auto;
+            max-width: 400px; /* Scaled for mobile screenshots */
+            height: auto;
         }
 
-        /* The dynamic text box layers that look like inputs on the image */
-        .text-patch {
+        /* This layer sits on top of your photo */
+        .interaction-layer {
             position: absolute;
-            background: #000000; /* Default matches your midnight theme screenshot */
-            color: #e0e1e5;
-            border: 1px dashed rgba(0, 240, 255, 0.5);
-            font-size: 14px; /* Default sizing closer to mobile layout */
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            outline: none;
-            padding: 2px 4px;
-            white-space: pre-wrap;
-            cursor: move;
-            min-width: 50px;
-            min-height: 20px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
-        /* Remove dashed border when exporting */
-        .text-patch.exporting {
-            border: none !important;
+        /* Editable text boxes that you position over the chat bubbles */
+        .editable-text {
+            position: absolute;
+            color: var(--text-color);
+            background: var(--bg-midnight); /* Blends into the black background */
+            font-size: 15px;
+            line-height: 1.3;
+            outline: none;
+            min-width: 40px;
+            padding: 2px;
+            cursor: text;
+            white-space: pre-wrap;
+        }
+
+        .editable-text:hover {
+            box-shadow: 0 0 0 1px #5865f2;
+        }
+
+        /* Hide the blue outlines when saving the photo */
+        .exporting .editable-text {
+            box-shadow: none !important;
         }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>Text Replacer</h2>
-        <p class="instructions">
-            1. Upload your chat screenshot.<br>
-            2. Click "Add Text Block".<br>
-            3. Drag the block over the original text.<br>
-            4. Type your new message directly into it.<br>
-            5. Double-click a block to remove it.
-        </p>
-
-        <input type="file" id="upload-img" accept="image/*" style="display: none;">
-        <label for="upload-img" class="btn">Upload Screenshot</label>
-
-        <button class="btn" onclick="addTextBlock()">+ Add Text Block</button>
-
-        <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
-            <label style="font-size: 0.8rem; color: #aaa;">Patch Background Color:</label>
-            <input type="color" id="patch-color" value="#000000" style="width:100%; height:30px; border:none; background:transparent; cursor:pointer;">
-        </div>
-
-        <button class="btn btn-main" style="margin-top: auto;" onclick="exportImage()">Export Result</button>
+    <div class="toolbar">
+        <input type="file" id="image-upload" accept="image/*" style="display:none">
+        <button class="btn" onclick="document.getElementById('image-upload').click()">1. Upload Screenshot</button>
+        <button class="btn" style="background:#248046" onclick="createNewText()">2. Add Editable Field</button>
+        <button class="btn" style="background:#eb459e" onclick="saveImage()">3. Save Finished Image</button>
     </div>
 
-    <div class="workspace">
-        <div id="editor-container">
-            <img id="base-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='390' height='500' viewBox='0 0 390 500'><rect width='100%' height='100%' fill='%23111214'/><text x='50%23' y='50%23' font-family='sans-serif' font-size='16' fill='%23949ba4' text-anchor='middle'>Upload a screenshot to begin</text></svg>">
-        </div>
+    <div id="capture-area" class="canvas-container">
+        <img id="bg-image" src="">
+        <div id="interaction-layer" class="interaction-layer"></div>
     </div>
 
     <script>
-        const uploadImg = document.getElementById('upload-img');
-        const baseImage = document.getElementById('base-image');
-        const editorContainer = document.getElementById('editor-container');
-        const patchColor = document.getElementById('patch-color');
+        const upload = document.getElementById('image-upload');
+        const bgImage = document.getElementById('bg-image');
+        const container = document.getElementById('capture-area');
+        const layer = document.getElementById('interaction-layer');
 
-        // Load the uploaded screenshot into the canvas frame
-        uploadImg.addEventListener('change', (e) => {
+        // Step 1: Load your image.png
+        upload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                baseImage.src = URL.createObjectURL(file);
-                // Clear any leftover patches from previous edits
-                document.querySelectorAll('.text-patch').forEach(el => el.remove());
+                bgImage.src = URL.createObjectURL(file);
+                container.style.display = 'block';
             }
         });
 
-        // Spawn an editable box over the image
-        function addTextBlock() {
-            const patch = document.createElement('div');
-            patch.className = 'text-patch';
-            patch.contentEditable = true;
-            patch.innerText = 'New text...';
-            patch.style.backgroundColor = patchColor.value;
-            patch.style.left = '50px';
-            patch.style.top = '100px';
+        // Step 2: Create a text box you can move and type in
+        function createNewText() {
+            const div = document.createElement('div');
+            div.className = 'editable-text';
+            div.contentEditable = true;
+            div.innerText = "Click to type...";
+            div.style.left = "80px"; // Default position near avatar
+            div.style.top = "100px";
 
-            // Dragging Logic
+            // Make it draggable so you can align it perfectly over the old text
             let isDragging = false;
-            let startX, startY;
-
-            patch.addEventListener('mousedown', (e) => {
-                // Only drag if clicking near borders, allowing normal text insertion inside
-                if (e.target === patch && document.activeElement !== patch) {
+            div.addEventListener('mousedown', (e) => {
+                if (e.altKey) { // Hold ALT to drag
                     isDragging = true;
-                    startX = e.clientX - patch.offsetLeft;
-                    startY = e.clientY - patch.offsetTop;
-                    e.preventDefault();
                 }
             });
 
             document.addEventListener('mousemove', (e) => {
                 if (isDragging) {
-                    let x = e.clientX - startX;
-                    let y = e.clientY - startY;
-                    
-                    // Constrain within the canvas container boundaries
-                    x = Math.max(0, Math.min(x, editorContainer.clientWidth - patch.clientWidth));
-                    y = Math.max(0, Math.min(y, editorContainer.clientHeight - patch.clientHeight));
-                    
-                    patch.style.left = x + 'px';
-                    patch.style.top = y + 'px';
+                    const rect = container.getBoundingClientRect();
+                    div.style.left = (e.clientX - rect.left - 20) + 'px';
+                    div.style.top = (e.clientY - rect.top - 10) + 'px';
                 }
             });
 
-            document.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
+            document.addEventListener('mouseup', () => isDragging = false);
 
-            // Double click removes the block
-            patch.addEventListener('dblclick', () => {
-                patch.remove();
-            });
-
-            editorContainer.appendChild(patch);
+            layer.appendChild(div);
         }
 
-        // Live color updater for the active edits
-        patchColor.addEventListener('input', () => {
-            document.querySelectorAll('.text-patch').forEach(patch => {
-                patch.style.backgroundColor = patchColor.value;
-            });
-        });
-
-        // Render compilation engine
-        function exportImage() {
-            const patches = document.querySelectorAll('.text-patch');
+        // Step 3: Screenshot the whole thing together
+        function saveImage() {
+            container.classList.add('exporting');
             
-            // Hide the edit boxes outline borders temporarily
-            patches.forEach(p => p.classList.add('exporting'));
-
-            html2canvas(editorContainer, {
-                scale: 3, // Maintains high native fidelity zoom metrics
-                logging: false,
+            html2canvas(container, {
+                backgroundColor: '#000000',
+                scale: 3,
                 useCORS: true
             }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `Photoshopped_Chat_${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
+                link.download = 'edited_conversation.png';
+                link.href = canvas.toDataURL();
                 link.click();
-
-                // Restore editing lines
-                patches.forEach(p => p.classList.remove('exporting'));
+                container.classList.remove('exporting');
             });
         }
     </script>
+
+    <div style="margin-top: 20px; color: #949ba4; font-size: 0.8rem;">
+        Tip: <b>Hold ALT and Drag</b> to move text boxes | Double-click text to edit.
+    </div>
+
 </body>
 </html>
