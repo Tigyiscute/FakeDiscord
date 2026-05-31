@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Message Spoofer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            /* Discord Palette */
+            --bg-main: #313338;
+            --text-normal: #dbdee1;
+            --text-username: #f2f3f5;
+            --text-muted: #949ba4;
+            --bot-bg: #5865f2;
+            
+            /* Sidebar Palette (Your Glassmorphism Vibe) */
+            --panel-bg: rgba(20, 20, 25, 0.7);
+            --accent-cyan: #00f0ff;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background: #0f0f12;
+            color: #fff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- CONTROL PANEL (SIDEBAR) --- */
+        .sidebar {
+            width: 350px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            z-index: 10;
+        }
+
+        .sidebar h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.4rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: #aaa;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        input, textarea, select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-download {
+            background: var(--accent-cyan);
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: auto;
+            font-size: 1rem;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .btn-download:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* --- PREVIEW CANVAS AREA --- */
+        .preview-area {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #18191c;
+            padding: 20px;
+        }
+
+        /* Exactly looks like Discord Chat */
+        #discord-capture {
+            background: var(--bg-main);
+            width: 100%;
+            max-width: 650px;
+            padding: 16px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .msg-container {
+            display: flex;
+            position: relative;
+        }
+
+        .avatar-container {
+            margin-right: 16px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #5865f2; /* Default fall back color */
+        }
+
+        .msg-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .msg-header {
+            display: flex;
+            align-items: center;
+            line-height: 1.375rem;
+        }
+
+        .username {
+            color: var(--text-username);
+            font-weight: 500;
+            font-size: 1rem;
+            display: inline-block;
+        }
+
+        .bot-tag {
+            background: var(--bot-bg);
+            color: #fff;
+            font-size: 0.625rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-left: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: none; /* Toggled via JS */
+        }
+
+        .timestamp {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-left: 8px;
+            cursor: default;
+        }
+
+        .msg-body {
+            color: var(--text-normal);
+            font-size: 1rem;
+            line-height: 1.375rem;
+            margin-top: 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Message Config</h2>
+        
+        <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="in-user" value="Wumpus">
+        </div>
+
+        <div class="input-group">
+            <label>Name Color</label>
+            <input type="color" id="in-color" value="#f2f3f5">
+        </div>
+
+        <div class="input-group">
+            <label>Avatar URL</label>
+            <input type="text" id="in-avatar" placeholder="Paste image address...">
+        </div>
+
+        <div class="input-group">
+            <label>Timestamp</label>
+            <input type="text" id="in-time" value="Today at 1:07 AM">
+        </div>
+
+        <div class="input-group">
+            <label>Message Content</label>
+            <textarea id="in-message" rows="4">Hey! Check out this perfectly rendered Discord screenshot tool running natively in the browser.</textarea>
+        </div>
+
+        <label class="checkbox-group">
+            <input type="checkbox" id="in-bot">
+            <span>Is Bot Account</span>
+        </label>
+
+        <button class="btn-download" onclick="generateImage()">Export Screenshot</button>
+    </div>
+
+    <div class="preview-area">
+        <div id="discord-capture">
+            <div class="msg-container">
+                <div class="avatar-container">
+                    <img id="view-avatar" class="avatar" src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" alt="">
+                </div>
+                <div class="msg-content">
+                    <div class="msg-header">
+                        <span id="view-username" class="username">Wumpus</span>
+                        <span id="view-bot" class="bot-tag">Bot</span>
+                        <span id="view-time" class="timestamp">Today at 1:07 AM</span>
+                    </div>
+                    <div id="view-message" class="msg-body">Hey! Check out this perfectly rendered Discord screenshot tool running natively in the browser.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Element links
+        const inUser = document.getElementById('in-user');
+        const inColor = document.getElementById('in-color');
+        const inAvatar = document.getElementById('in-avatar');
+        const inTime = document.getElementById('in-time');
+        const inMessage = document.getElementById('in-message');
+        const inBot = document.getElementById('in-bot');
+
+        const viewUser = document.getElementById('view-username');
+        const viewAvatar = document.getElementById('view-avatar');
+        const viewTime = document.getElementById('view-time');
+        const viewMessage = document.getElementById('view-message');
+        const viewBot = document.getElementById('view-bot');
+
+        // Real-time Event Listeners
+        inUser.addEventListener('input', () => viewUser.innerText = inUser.value);
+        inTime.addEventListener('input', () => viewTime.innerText = inTime.value);
+        inMessage.addEventListener('input', () => viewMessage.innerText = inMessage.value);
+        
+        inColor.addEventListener('input', () => viewUser.style.color = inColor.value);
+        
+        inBot.addEventListener('change', () => {
+            viewBot.style.display = inBot.checked ? 'inline-block' : 'none';
+        });
+
+        inAvatar.addEventListener('input', () => {
+            if(inAvatar.value.trim() !== "") {
+                // Allows cross-origin images if the external site allows it
+                viewAvatar.src = inAvatar.value;
+            } else {
+                viewAvatar.src = "https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png";
+            }
+        });
+
+        // HTML Canvas Compiler
+        function generateImage() {
+            const target = document.getElementById('discord-capture');
+            
+            // Configuration options to prevent rendering artifacts or broken layouts
+            html2canvas(target, {
+                backgroundColor: '#313338',
+                scale: 2, // Doubles resolution for ultra-sharp text assets
+                useCORS: true, // Crucial step for handling remote custom avatar links
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `discord_spoof_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
