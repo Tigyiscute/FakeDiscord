@@ -3,192 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Message Spoofer</title>
+    <title>Discord Mobile DM Renderer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* Discord Palette */
-            --bg-main: #313338;
-            --text-normal: #dbdee1;
-            --text-username: #f2f3f5;
+            /* Discord Mobile Midnight Theme Colors */
+            --bg-midnight: #000000;
+            --text-main: #f2f3f5;
             --text-muted: #949ba4;
-            --bot-bg: #5865f2;
+            --date-line: #1e1f22;
             
-            /* Sidebar Palette (Your Glassmorphism Vibe) */
-            --panel-bg: rgba(20, 20, 25, 0.7);
-            --accent-cyan: #00f0ff;
-            --border-color: rgba(255, 255, 255, 0.1);
+            /* Sidebar Panel Styling */
+            --panel-bg: #111214;
+            --accent-blue: #5865f2;
         }
 
         body {
             margin: 0;
-            padding: 0;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            background: #0f0f12;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #111214;
             color: #fff;
             display: flex;
             height: 100vh;
-            overflow: hidden;
         }
 
-        /* --- CONTROL PANEL (SIDEBAR) --- */
+        /* --- SIDEBAR CONTROLS --- */
         .sidebar {
-            width: 350px;
+            width: 360px;
             background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border-right: 1px solid var(--border-color);
-            padding: 24px;
+            border-right: 1px solid #1e1f22;
+            padding: 20px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 15px;
+            overflow-y: auto;
             z-index: 10;
         }
 
-        .sidebar h2 {
-            margin: 0 0 10px 0;
-            font-size: 1.4rem;
-            color: var(--accent-cyan);
-            letter-spacing: 1px;
-            text-transform: uppercase;
+        .sidebar h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
         }
 
-        .input-group {
+        .field {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
 
-        .input-group label {
-            font-size: 0.8rem;
-            color: #aaa;
+        .field label {
+            font-size: 0.75rem;
+            color: #b5bac1;
+            font-weight: 700;
             text-transform: uppercase;
-            font-weight: bold;
         }
 
-        input, textarea, select {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
+        input[type="text"], textarea {
+            background: #1e1f22;
+            border: 1px solid #2b2d31;
             padding: 10px;
-            border-radius: 6px;
-            color: #fff;
+            border-radius: 4px;
+            color: #dbdee1;
             font-size: 0.9rem;
             outline: none;
-            transition: border 0.2s;
         }
 
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--accent-cyan);
+        input[type="file"] {
+            color: #949ba4;
+            font-size: 0.8rem;
         }
 
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-
-        .btn-download {
-            background: var(--accent-cyan);
-            color: #000;
+        .btn-export {
+            background: var(--accent-blue);
+            color: white;
             border: none;
             padding: 12px;
-            border-radius: 6px;
-            font-weight: bold;
+            border-radius: 4px;
+            font-weight: 600;
             cursor: pointer;
-            margin-top: auto;
-            font-size: 1rem;
-            transition: transform 0.1s, box-shadow 0.2s;
+            margin-top: 10px;
         }
 
-        .btn-download:hover {
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-            transform: translateY(-1px);
-        }
-
-        /* --- PREVIEW CANVAS AREA --- */
-        .preview-area {
-            flex-grow: 1;
+        /* --- MOBILE VIEWPORT STAGE --- */
+        .stage {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #18191c;
+            background: #1e1f22;
             padding: 20px;
+            overflow-y: auto;
         }
 
-        /* Exactly looks like Discord Chat */
-        #discord-capture {
-            background: var(--bg-main);
-            width: 100%;
-            max-width: 650px;
-            padding: 16px;
-            border-radius: 4px;
+        /* Matches the tight width constraints of a phone screen */
+        #mobile-capture {
+            background: var(--bg-midnight);
+            width: 390px; /* Standard iPhone/Android viewport width width */
+            padding: 16px 0;
             box-sizing: border-box;
-        }
-
-        .msg-container {
             display: flex;
-            position: relative;
+            flex-direction: column;
         }
 
-        .avatar-container {
-            margin-right: 16px;
-            margin-top: 2px;
+        /* Date Separator Line */
+        .date-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 16px 0;
+            padding: 0 16px;
+        }
+
+        .date-divider::before, .date-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--date-line);
+        }
+
+        .date-text {
+            padding: 0 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* Mobile Message Item */
+        .msg-item {
+            display: flex;
+            padding: 8px 16px;
+            background: transparent;
+        }
+
+        .avatar-box {
+            margin-right: 12px;
             flex-shrink: 0;
+            position: relative;
+            width: 40px;
+            height: 40px;
         }
 
-        .avatar {
+        .avatar-img {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            background: #5865f2; /* Default fall back color */
         }
 
-        .msg-content {
+        /* Replicating the glowing Nitro decoration ring seen in your screenshot */
+        .nitro-ring {
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1.5px solid #ff45a4;
+            box-shadow: 0 0 8px #ff45a4;
+            box-sizing: border-box;
+            pointer-events: none;
+            display: none; /* Controlled via toggle */
+        }
+
+        .msg-body-wrapper {
             display: flex;
             flex-direction: column;
-            width: 100%;
         }
 
-        .msg-header {
+        .msg-meta {
             display: flex;
             align-items: center;
-            line-height: 1.375rem;
+            margin-bottom: 2px;
         }
 
-        .username {
-            color: var(--text-username);
-            font-weight: 500;
-            font-size: 1rem;
-            display: inline-block;
-        }
-
-        .bot-tag {
-            background: var(--bot-bg);
-            color: #fff;
-            font-size: 0.625rem;
-            padding: 1px 4px;
-            border-radius: 3px;
-            margin-left: 6px;
+        .user-title {
+            color: var(--text-main);
             font-weight: 600;
-            text-transform: uppercase;
-            display: none; /* Toggled via JS */
+            font-size: 0.95rem;
+            margin-right: 8px;
         }
 
-        .timestamp {
+        .time-stamp {
             color: var(--text-muted);
-            font-size: 0.75rem;
-            margin-left: 8px;
-            cursor: default;
+            font-size: 0.7rem;
+            font-weight: 500;
         }
 
-        .msg-body {
-            color: var(--text-normal);
-            font-size: 1rem;
-            line-height: 1.375rem;
-            margin-top: 4px;
+        .text-content {
+            color: #e0e1e5;
+            font-size: 0.95rem;
+            line-height: 1.3;
             white-space: pre-wrap;
             word-break: break-word;
         }
@@ -197,109 +202,118 @@
 <body>
 
     <div class="sidebar">
-        <h2>Message Config</h2>
+        <h3>Mobile DM Editor</h3>
         
-        <div class="input-group">
-            <label>Username</label>
-            <input type="text" id="in-user" value="Wumpus">
+        <div class="field">
+            <label>Date Divider</label>
+            <input type="text" id="in-divider" value="April 25, 2026">
         </div>
 
-        <div class="input-group">
-            <label>Name Color</label>
-            <input type="color" id="in-color" value="#f2f3f5">
+        <hr style="border-color: #2b2d31; width: 100%; margin: 5px 0;">
+
+        <div class="field">
+            <label>User Avatar (.png/.jpg)</label>
+            <input type="file" id="up-avatar" accept="image/*">
         </div>
 
-        <div class="input-group">
-            <label>Avatar URL</label>
-            <input type="text" id="in-avatar" placeholder="Paste image address...">
+        <div class="field">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="checkbox" id="toggle-ring">
+                <label for="toggle-ring" style="cursor:pointer; margin:0;">Glow Avatar Ring</label>
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>Timestamp</label>
-            <input type="text" id="in-time" value="Today at 1:07 AM">
+        <div class="field">
+            <label>User Display Name</label>
+            <input type="text" id="in-name" value="Arthur Morgan">
         </div>
 
-        <div class="input-group">
-            <label>Message Content</label>
-            <textarea id="in-message" rows="4">Hey! Check out this perfectly rendered Discord screenshot tool running natively in the browser.</textarea>
+        <div class="field">
+            <label>Message Timestamp</label>
+            <input type="text" id="in-time" value="4/25/26, 11:30 AM">
         </div>
 
-        <label class="checkbox-group">
-            <input type="checkbox" id="in-bot">
-            <span>Is Bot Account</span>
-        </label>
+        <div class="field">
+            <label>Message Text</label>
+            <textarea id="in-body" rows="4">im doing good too&#10;&#10;um when im going to get the ownership for my server?&#10;?</textarea>
+        </div>
 
-        <button class="btn-download" onclick="generateImage()">Export Screenshot</button>
+        <button class="btn-export" onclick="exportMobileCapture()">Download Mobile Screenshot</button>
     </div>
 
-    <div class="preview-area">
-        <div id="discord-capture">
-            <div class="msg-container">
-                <div class="avatar-container">
-                    <img id="view-avatar" class="avatar" src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" alt="">
+    <div class="stage">
+        <div id="mobile-capture">
+            
+            <div class="date-divider">
+                <span id="view-divider" class="date-text">April 25, 2026</span>
+            </div>
+
+            <div class="msg-item">
+                <div class="avatar-box">
+                    <div id="view-ring" class="nitro-ring"></div>
+                    <img id="view-avatar" class="avatar-img" src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png">
                 </div>
-                <div class="msg-content">
-                    <div class="msg-header">
-                        <span id="view-username" class="username">Wumpus</span>
-                        <span id="view-bot" class="bot-tag">Bot</span>
-                        <span id="view-time" class="timestamp">Today at 1:07 AM</span>
+                <div class="msg-body-wrapper">
+                    <div class="msg-meta">
+                        <span id="view-name" class="user-title">Arthur Morgan</span>
+                        <span id="view-time" class="time-stamp">4/25/26, 11:30 AM</span>
                     </div>
-                    <div id="view-message" class="msg-body">Hey! Check out this perfectly rendered Discord screenshot tool running natively in the browser.</div>
+                    <div id="view-body" class="text-content">im doing good too
+
+um when im going to get the ownership for my server?
+?</div>
                 </div>
             </div>
+
         </div>
     </div>
 
     <script>
-        // DOM Element links
-        const inUser = document.getElementById('in-user');
-        const inColor = document.getElementById('in-color');
-        const inAvatar = document.getElementById('in-avatar');
+        // DOM bindings
+        const inDivider = document.getElementById('in-divider');
+        const upAvatar = document.getElementById('up-avatar');
+        const toggleRing = document.getElementById('toggle-ring');
+        const inName = document.getElementById('in-name');
         const inTime = document.getElementById('in-time');
-        const inMessage = document.getElementById('in-message');
-        const inBot = document.getElementById('in-bot');
+        const inBody = document.getElementById('in-body');
 
-        const viewUser = document.getElementById('view-username');
+        const viewDivider = document.getElementById('view-divider');
         const viewAvatar = document.getElementById('view-avatar');
+        const viewRing = document.getElementById('view-ring');
+        const viewName = document.getElementById('view-name');
         const viewTime = document.getElementById('view-time');
-        const viewMessage = document.getElementById('view-message');
-        const viewBot = document.getElementById('view-bot');
+        const viewBody = document.getElementById('view-body');
 
-        // Real-time Event Listeners
-        inUser.addEventListener('input', () => viewUser.innerText = inUser.value);
+        // Dynamic binding loops
+        inDivider.addEventListener('input', () => viewDivider.innerText = inDivider.value);
+        inName.addEventListener('input', () => viewName.innerText = inName.value);
         inTime.addEventListener('input', () => viewTime.innerText = inTime.value);
-        inMessage.addEventListener('input', () => viewMessage.innerText = inMessage.value);
-        
-        inColor.addEventListener('input', () => viewUser.style.color = inColor.value);
-        
-        inBot.addEventListener('change', () => {
-            viewBot.style.display = inBot.checked ? 'inline-block' : 'none';
+        inBody.addEventListener('input', () => viewBody.innerText = inBody.value);
+
+        toggleRing.addEventListener('change', () => {
+            viewRing.style.display = toggleRing.checked ? 'block' : 'none';
         });
 
-        inAvatar.addEventListener('input', () => {
-            if(inAvatar.value.trim() !== "") {
-                // Allows cross-origin images if the external site allows it
-                viewAvatar.src = inAvatar.value;
-            } else {
-                viewAvatar.src = "https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png";
+        upAvatar.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                viewAvatar.src = URL.createObjectURL(file);
             }
         });
 
-        // HTML Canvas Compiler
-        function generateImage() {
-            const target = document.getElementById('discord-capture');
-            
-            // Configuration options to prevent rendering artifacts or broken layouts
-            html2canvas(target, {
-                backgroundColor: '#313338',
-                scale: 2, // Doubles resolution for ultra-sharp text assets
-                useCORS: true, // Crucial step for handling remote custom avatar links
+        // Pixel-Perfect Exporter
+        function exportMobileCapture() {
+            const node = document.getElementById('mobile-capture');
+            html2canvas(node, {
+                backgroundColor: '#000000',
+                scale: 3, // Super high resolution rendering to bypass text blur
                 logging: false
             }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `discord_spoof_${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                const targetUri = canvas.toDataURL('image/png');
+                const triggerLink = document.createElement('a');
+                triggerLink.download = `Discord_Mobile_${Date.now()}.png`;
+                triggerLink.href = targetUri;
+                triggerLink.click();
             });
         }
     </script>
