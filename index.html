@@ -3,317 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Mobile DM Renderer</title>
+    <title>Chat Text Replacer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* Discord Mobile Midnight Theme Colors */
-            --bg-midnight: #000000;
-            --text-main: #f2f3f5;
-            --text-muted: #949ba4;
-            --date-line: #1e1f22;
-            
-            /* Sidebar Panel Styling */
             --panel-bg: #111214;
-            --accent-blue: #5865f2;
+            --accent: #00f0ff;
+            --border: rgba(255, 255, 255, 0.1);
         }
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #111214;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1e1f22;
             color: #fff;
             display: flex;
             height: 100vh;
+            overflow: hidden;
         }
 
-        /* --- SIDEBAR CONTROLS --- */
+        /* --- CONTROLS SIDEBAR --- */
         .sidebar {
-            width: 360px;
+            width: 340px;
             background: var(--panel-bg);
-            border-right: 1px solid #1e1f22;
+            border-right: 1px solid var(--border);
             padding: 20px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            overflow-y: auto;
-            z-index: 10;
         }
 
-        .sidebar h3 {
-            margin: 0 0 5px 0;
-            font-size: 1.1rem;
-            color: var(--accent-blue);
-        }
-
-        .field {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .field label {
-            font-size: 0.75rem;
-            color: #b5bac1;
-            font-weight: 700;
+        .sidebar h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--accent);
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        input[type="text"], textarea {
-            background: #1e1f22;
-            border: 1px solid #2b2d31;
+        .btn {
+            background: #313338;
+            color: #fff;
+            border: 1px solid var(--border);
             padding: 10px;
             border-radius: 4px;
-            color: #dbdee1;
-            font-size: 0.9rem;
-            outline: none;
-        }
-
-        input[type="file"] {
-            color: #949ba4;
-            font-size: 0.8rem;
-        }
-
-        .btn-export {
-            background: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 4px;
-            font-weight: 600;
             cursor: pointer;
-            margin-top: 10px;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-align: center;
         }
 
-        /* --- MOBILE VIEWPORT STAGE --- */
-        .stage {
+        .btn:hover {
+            border-color: var(--accent);
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .btn-main {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-main:hover {
+            background: #00c8d6;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+
+        .instructions {
+            font-size: 0.85rem;
+            color: #949ba4;
+            line-height: 1.4;
+            background: rgba(255,255,255,0.02);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* --- WORKSPACE --- */
+        .workspace {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #1e1f22;
             padding: 20px;
-            overflow-y: auto;
-        }
-
-        /* Matches the tight width constraints of a phone screen */
-        #mobile-capture {
-            background: var(--bg-midnight);
-            width: 390px; /* Standard iPhone/Android viewport width width */
-            padding: 16px 0;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Date Separator Line */
-        .date-divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 16px 0;
-            padding: 0 16px;
-        }
-
-        .date-divider::before, .date-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid var(--date-line);
-        }
-
-        .date-text {
-            padding: 0 8px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        /* Mobile Message Item */
-        .msg-item {
-            display: flex;
-            padding: 8px 16px;
-            background: transparent;
-        }
-
-        .avatar-box {
-            margin-right: 12px;
-            flex-shrink: 0;
+            overflow: auto;
             position: relative;
-            width: 40px;
-            height: 40px;
         }
 
-        .avatar-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
+        /* Container that holds the uploaded image and the editable text boxes */
+        #editor-container {
+            position: relative;
+            display: inline-block;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* Replicating the glowing Nitro decoration ring seen in your screenshot */
-        .nitro-ring {
+        #base-image {
+            display: block;
+            max-height: 85vh;
+            width: auto;
+        }
+
+        /* The dynamic text box layers that look like inputs on the image */
+        .text-patch {
             position: absolute;
-            top: -2px;
-            left: -2px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1.5px solid #ff45a4;
-            box-shadow: 0 0 8px #ff45a4;
-            box-sizing: border-box;
-            pointer-events: none;
-            display: none; /* Controlled via toggle */
-        }
-
-        .msg-body-wrapper {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .msg-meta {
-            display: flex;
-            align-items: center;
-            margin-bottom: 2px;
-        }
-
-        .user-title {
-            color: var(--text-main);
-            font-weight: 600;
-            font-size: 0.95rem;
-            margin-right: 8px;
-        }
-
-        .time-stamp {
-            color: var(--text-muted);
-            font-size: 0.7rem;
-            font-weight: 500;
-        }
-
-        .text-content {
+            background: #000000; /* Default matches your midnight theme screenshot */
             color: #e0e1e5;
-            font-size: 0.95rem;
-            line-height: 1.3;
+            border: 1px dashed rgba(0, 240, 255, 0.5);
+            font-size: 14px; /* Default sizing closer to mobile layout */
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            outline: none;
+            padding: 2px 4px;
             white-space: pre-wrap;
-            word-break: break-word;
+            cursor: move;
+            min-width: 50px;
+            min-height: 20px;
+        }
+
+        /* Remove dashed border when exporting */
+        .text-patch.exporting {
+            border: none !important;
         }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h3>Mobile DM Editor</h3>
-        
-        <div class="field">
-            <label>Date Divider</label>
-            <input type="text" id="in-divider" value="April 25, 2026">
+        <h2>Text Replacer</h2>
+        <p class="instructions">
+            1. Upload your chat screenshot.<br>
+            2. Click "Add Text Block".<br>
+            3. Drag the block over the original text.<br>
+            4. Type your new message directly into it.<br>
+            5. Double-click a block to remove it.
+        </p>
+
+        <input type="file" id="upload-img" accept="image/*" style="display: none;">
+        <label for="upload-img" class="btn">Upload Screenshot</label>
+
+        <button class="btn" onclick="addTextBlock()">+ Add Text Block</button>
+
+        <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
+            <label style="font-size: 0.8rem; color: #aaa;">Patch Background Color:</label>
+            <input type="color" id="patch-color" value="#000000" style="width:100%; height:30px; border:none; background:transparent; cursor:pointer;">
         </div>
 
-        <hr style="border-color: #2b2d31; width: 100%; margin: 5px 0;">
-
-        <div class="field">
-            <label>User Avatar (.png/.jpg)</label>
-            <input type="file" id="up-avatar" accept="image/*">
-        </div>
-
-        <div class="field">
-            <div style="display:flex; gap:8px; align-items:center;">
-                <input type="checkbox" id="toggle-ring">
-                <label for="toggle-ring" style="cursor:pointer; margin:0;">Glow Avatar Ring</label>
-            </div>
-        </div>
-
-        <div class="field">
-            <label>User Display Name</label>
-            <input type="text" id="in-name" value="Arthur Morgan">
-        </div>
-
-        <div class="field">
-            <label>Message Timestamp</label>
-            <input type="text" id="in-time" value="4/25/26, 11:30 AM">
-        </div>
-
-        <div class="field">
-            <label>Message Text</label>
-            <textarea id="in-body" rows="4">im doing good too&#10;&#10;um when im going to get the ownership for my server?&#10;?</textarea>
-        </div>
-
-        <button class="btn-export" onclick="exportMobileCapture()">Download Mobile Screenshot</button>
+        <button class="btn btn-main" style="margin-top: auto;" onclick="exportImage()">Export Result</button>
     </div>
 
-    <div class="stage">
-        <div id="mobile-capture">
-            
-            <div class="date-divider">
-                <span id="view-divider" class="date-text">April 25, 2026</span>
-            </div>
-
-            <div class="msg-item">
-                <div class="avatar-box">
-                    <div id="view-ring" class="nitro-ring"></div>
-                    <img id="view-avatar" class="avatar-img" src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png">
-                </div>
-                <div class="msg-body-wrapper">
-                    <div class="msg-meta">
-                        <span id="view-name" class="user-title">Arthur Morgan</span>
-                        <span id="view-time" class="time-stamp">4/25/26, 11:30 AM</span>
-                    </div>
-                    <div id="view-body" class="text-content">im doing good too
-
-um when im going to get the ownership for my server?
-?</div>
-                </div>
-            </div>
-
+    <div class="workspace">
+        <div id="editor-container">
+            <img id="base-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='390' height='500' viewBox='0 0 390 500'><rect width='100%' height='100%' fill='%23111214'/><text x='50%23' y='50%23' font-family='sans-serif' font-size='16' fill='%23949ba4' text-anchor='middle'>Upload a screenshot to begin</text></svg>">
         </div>
     </div>
 
     <script>
-        // DOM bindings
-        const inDivider = document.getElementById('in-divider');
-        const upAvatar = document.getElementById('up-avatar');
-        const toggleRing = document.getElementById('toggle-ring');
-        const inName = document.getElementById('in-name');
-        const inTime = document.getElementById('in-time');
-        const inBody = document.getElementById('in-body');
+        const uploadImg = document.getElementById('upload-img');
+        const baseImage = document.getElementById('base-image');
+        const editorContainer = document.getElementById('editor-container');
+        const patchColor = document.getElementById('patch-color');
 
-        const viewDivider = document.getElementById('view-divider');
-        const viewAvatar = document.getElementById('view-avatar');
-        const viewRing = document.getElementById('view-ring');
-        const viewName = document.getElementById('view-name');
-        const viewTime = document.getElementById('view-time');
-        const viewBody = document.getElementById('view-body');
-
-        // Dynamic binding loops
-        inDivider.addEventListener('input', () => viewDivider.innerText = inDivider.value);
-        inName.addEventListener('input', () => viewName.innerText = inName.value);
-        inTime.addEventListener('input', () => viewTime.innerText = inTime.value);
-        inBody.addEventListener('input', () => viewBody.innerText = inBody.value);
-
-        toggleRing.addEventListener('change', () => {
-            viewRing.style.display = toggleRing.checked ? 'block' : 'none';
-        });
-
-        upAvatar.addEventListener('change', (e) => {
+        // Load the uploaded screenshot into the canvas frame
+        uploadImg.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                viewAvatar.src = URL.createObjectURL(file);
+                baseImage.src = URL.createObjectURL(file);
+                // Clear any leftover patches from previous edits
+                document.querySelectorAll('.text-patch').forEach(el => el.remove());
             }
         });
 
-        // Pixel-Perfect Exporter
-        function exportMobileCapture() {
-            const node = document.getElementById('mobile-capture');
-            html2canvas(node, {
-                backgroundColor: '#000000',
-                scale: 3, // Super high resolution rendering to bypass text blur
-                logging: false
+        // Spawn an editable box over the image
+        function addTextBlock() {
+            const patch = document.createElement('div');
+            patch.className = 'text-patch';
+            patch.contentEditable = true;
+            patch.innerText = 'New text...';
+            patch.style.backgroundColor = patchColor.value;
+            patch.style.left = '50px';
+            patch.style.top = '100px';
+
+            // Dragging Logic
+            let isDragging = false;
+            let startX, startY;
+
+            patch.addEventListener('mousedown', (e) => {
+                // Only drag if clicking near borders, allowing normal text insertion inside
+                if (e.target === patch && document.activeElement !== patch) {
+                    isDragging = true;
+                    startX = e.clientX - patch.offsetLeft;
+                    startY = e.clientY - patch.offsetTop;
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    let x = e.clientX - startX;
+                    let y = e.clientY - startY;
+                    
+                    // Constrain within the canvas container boundaries
+                    x = Math.max(0, Math.min(x, editorContainer.clientWidth - patch.clientWidth));
+                    y = Math.max(0, Math.min(y, editorContainer.clientHeight - patch.clientHeight));
+                    
+                    patch.style.left = x + 'px';
+                    patch.style.top = y + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Double click removes the block
+            patch.addEventListener('dblclick', () => {
+                patch.remove();
+            });
+
+            editorContainer.appendChild(patch);
+        }
+
+        // Live color updater for the active edits
+        patchColor.addEventListener('input', () => {
+            document.querySelectorAll('.text-patch').forEach(patch => {
+                patch.style.backgroundColor = patchColor.value;
+            });
+        });
+
+        // Render compilation engine
+        function exportImage() {
+            const patches = document.querySelectorAll('.text-patch');
+            
+            // Hide the edit boxes outline borders temporarily
+            patches.forEach(p => p.classList.add('exporting'));
+
+            html2canvas(editorContainer, {
+                scale: 3, // Maintains high native fidelity zoom metrics
+                logging: false,
+                useCORS: true
             }).then(canvas => {
-                const targetUri = canvas.toDataURL('image/png');
-                const triggerLink = document.createElement('a');
-                triggerLink.download = `Discord_Mobile_${Date.now()}.png`;
-                triggerLink.href = targetUri;
-                triggerLink.click();
+                const link = document.createElement('a');
+                link.download = `Photoshopped_Chat_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Restore editing lines
+                patches.forEach(p => p.classList.remove('exporting'));
             });
         }
     </script>
